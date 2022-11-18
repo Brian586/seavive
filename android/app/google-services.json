@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "497650999365",
+    "project_id": "seavive-10dad",
+    "storage_bucket": "seavive-10dad.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:497650999365:android:ce88da4144481d7a62432c",
+        "android_client_info": {
+          "package_name": "com.example.seavive"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "497650999365-1qv0fj0u59hrr5bsca7maqbhaf9v0aq5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA26gscvgDS9kU47UbWEhnQF1kw_I5-M_A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "497650999365-1qv0fj0u59hrr5bsca7maqbhaf9v0aq5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
