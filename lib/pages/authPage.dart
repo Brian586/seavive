@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -18,6 +19,7 @@ import '../models/account.dart';
 import '../widgets/ProgressWidget.dart';
 import '../widgets/customTextField.dart';
 import 'home.dart';
+import 'otpScreen.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({Key? key}) : super(key: key);
@@ -35,11 +37,11 @@ class _AuthPageState extends State<AuthPage> {
   TextEditingController password = TextEditingController();
   TextEditingController cPassword = TextEditingController();
   TextEditingController idNumber = TextEditingController();
-  String accountType = 'Tenant';
+  String accountType = 'Fisherman';
   bool showPassword = true;
   bool showCPassword = true;
   XFile? pickedFile;
-  //FirebaseAuth auth = FirebaseAuth.instance;
+  FirebaseAuth auth = FirebaseAuth.instance;
   final ImagePicker _picker = ImagePicker();
 
   double getWidth(Size size, SizingInformation sizeInfo) {
@@ -51,6 +53,86 @@ class _AuthPageState extends State<AuthPage> {
       return size.width * 0.3;
     }
   }
+
+  controlUploadAndRetrieve() async {
+    setState(() {
+      loading = true;
+    });
+
+    if(isSignUp) {
+
+      final credential = await auth.createUserWithEmailAndPassword(
+          email: email.text.trim(),
+          password: password.text.trim()
+      );
+
+      String result = await Authentication().createUserWithPhoneNative(context,
+          name: name.text.trim(),
+          idNumber: idNumber.text.trim(),
+          email: email.text.trim(),
+          password: password.text.trim(),
+          phone: phone.text.trim(),
+          accountType: accountType,
+          pickedFile: pickedFile,
+          userCredential: credential);
+
+      if (result.split("+").first == "success") {
+        await FirebaseFirestore.instance
+            .collection("users")
+            .doc(result.split("+").last)
+            .get()
+            .then((value) {
+          Account account = Account.fromDocument(value);
+
+          context.read<SeaVive>().switchUser(account);
+        });
+
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (context) => const HomePage()));
+
+        setState(() {
+          loading = false;
+        });
+      } else {
+        result = "User Aready Exists!";
+
+        setState(() {
+          loading = false;
+        });
+      }
+    } else {
+
+      final credential = await auth.signInWithEmailAndPassword(
+          email: email.text.trim(),
+          password: password.text.trim()
+      );
+
+      await FirebaseFirestore.instance.collection("users")
+          .doc(credential.user!.uid).get().then((documentSnapshot) {
+            if(documentSnapshot.exists) {
+              Account account = Account.fromDocument(documentSnapshot);
+
+              context.read<SeaVive>().switchUser(account);
+
+              Navigator.pushReplacement(
+                  context, MaterialPageRoute(builder: (context) => const HomePage()));
+
+              setState(() {
+                loading = false;
+              });
+            } else {
+              Fluttertoast.showToast(msg: "Account Does Not Exist");
+
+              setState(() {
+                loading = false;
+              });
+            }
+      });
+
+    }
+  }
+
+  void authenticateUser() async {}
 
   void handleAuth(BuildContext context) async {
     setState(() {
@@ -70,7 +152,7 @@ class _AuthPageState extends State<AuthPage> {
             res = await Authentication().createUserWithPhoneWeb(context,
                 name: name.text.trim(),
                 idNumber: idNumber.text.trim(),
-                email: email.text.trim(),
+                email: email.text.isEmpty ? "" : email.text.trim(),
                 password: password.text.trim(),
                 phone: phone.text.trim(),
                 accountType: accountType,
@@ -95,7 +177,7 @@ class _AuthPageState extends State<AuthPage> {
           context.read<SeaVive>().switchUser(account);
         });
 
-        Navigator.push(
+        Navigator.pushReplacement(
             context, MaterialPageRoute(builder: (context) => const HomePage()));
 
         setState(() {
@@ -119,49 +201,90 @@ class _AuthPageState extends State<AuthPage> {
       }
     } else {
       // Native platforms Android, iOS
+      await auth.verifyPhoneNumber(
+        phoneNumber: phone.text.trim(),
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          UserCredential userCredential =
+              await auth.signInWithCredential(credential);
 
-      String res = await Authentication().verifyUserWithPhone(context, isSignUp,
-          name: name.text.trim(),
-          idNumber: idNumber.text.trim(),
-          email: email.text.trim(),
-          password: password.text.trim(),
-          phone: phone.text.trim(),
-          accountType: accountType,
-          pickedFile: pickedFile);
+         // controlUploadAndRetrieve(userCredential);
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          if (e.code == 'invalid-phone-number') {
+            print('The provided phone number is not valid.');
 
-      if (res.split("+").first == "success") {
-        await FirebaseFirestore.instance
-            .collection("users")
-            .doc(res.split("+").last)
-            .get()
-            .then((value) {
-          Account account = Account.fromDocument(value);
+          }
+        },
+        codeSent: (String verificationId, int? resendToken) async {
+          String smsCode = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => OTPScreen(
+                    phoneNumber: phone.text.trim(),
+                  )));
 
-          context.read<SeaVive>().switchUser(account);
-        });
+          if (smsCode != "cancelled") {
+            PhoneAuthCredential credential = PhoneAuthProvider.credential(
+                verificationId: verificationId, smsCode: smsCode);
 
-        Navigator.push(
-            context, MaterialPageRoute(builder: (context) => HomePage()));
+            UserCredential userCredential =
+                await auth.signInWithCredential(credential);
 
-        setState(() {
-          loading = false;
-        });
-      } else {
-        showDialog<void>(
-          context: context,
-          barrierDismissible: true,
-          // false = user must tap button, true = tap outside dialog
-          builder: (BuildContext dialogContext) {
-            return ErrorAlertDialog(
-              message: "Error: $res",
-            );
-          },
-        );
+           // controlUploadAndRetrieve(userCredential);
+        }},
+        codeAutoRetrievalTimeout: (String verificationId) {
+          Fluttertoast.showToast(msg: "Timeout!");
+        },
+      );
 
-        setState(() {
-          loading = false;
-        });
-      }
+      // print("=====================1========================");
+      //
+      // String res = "";
+      //
+      // res = await Authentication().verifyUserWithPhone(context, isSignUp,
+      //     name: name.text.trim(),
+      //     idNumber: idNumber.text.trim(),
+      //     email: email.text.isEmpty ? "" : email.text.trim(),
+      //     password: password.text.trim(),
+      //     phone: phone.text.trim(),
+      //     accountType: accountType,
+      //     pickedFile: pickedFile);
+      //
+      // print("=====================4========================");
+      //
+      // if (res.split("+").first == "success") {
+      //   await FirebaseFirestore.instance
+      //       .collection("users")
+      //       .doc(res.split("+").last)
+      //       .get()
+      //       .then((value) {
+      //     Account account = Account.fromDocument(value);
+      //
+      //     context.read<SeaVive>().switchUser(account);
+      //   });
+      //
+      //   Navigator.pushReplacement(
+      //       context, MaterialPageRoute(builder: (context) => const HomePage()));
+      //
+      //   setState(() {
+      //     loading = false;
+      //   });
+      // } else {
+      //   showDialog<void>(
+      //     context: context,
+      //     barrierDismissible: true,
+      //     // false = user must tap button, true = tap outside dialog
+      //     builder: (BuildContext dialogContext) {
+      //       return ErrorAlertDialog(
+      //         message: "Error: $res",
+      //       );
+      //     },
+      //   );
+      //
+      //   setState(() {
+      //     loading = false;
+      //   });
+      // }
     }
   }
 
@@ -208,11 +331,8 @@ class _AuthPageState extends State<AuthPage> {
         bool isMobile = sizeInfo.isMobile;
 
         return Scaffold(
-            appBar: PreferredSize(
-              preferredSize: Size(size.width, 100.0),
-              child: AppBar(
-                title: const Text("Authentication"),
-              ),
+            appBar: AppBar(
+              title: const Text("Authentication"),
             ),
             body: loading
                 ? circularProgress()
@@ -235,6 +355,13 @@ class _AuthPageState extends State<AuthPage> {
                                     fontSize: 22.0,
                                   )),
                             ),
+                            isSignUp ? Container() : Image.asset(
+                              "assets/login.png",
+                              width: size.width,
+                              fit: BoxFit.contain,
+                              height: size.height*0.25,
+                              ),
+
                             Text(isSignUp ? "Create Account" : "Log In",
                                 style: GoogleFonts.baloo2(
                                   color: Theme.of(context).primaryColor,
@@ -350,7 +477,7 @@ class _AuthPageState extends State<AuthPage> {
                                             items: const [
                                               "Fisherman",
                                               "Researcher",
-                                              "Agent",
+                                              "Government",
                                             ],
                                             hint: "Continue as...",
                                             onChanged: (v) {
@@ -358,7 +485,7 @@ class _AuthPageState extends State<AuthPage> {
                                                 accountType = v!;
                                               });
                                             },
-                                            selectedItem: "Tenant"),
+                                            selectedItem: accountType),
                                       ),
                                       AuthTextField(
                                         controller: password,
@@ -433,7 +560,7 @@ class _AuthPageState extends State<AuthPage> {
                                                   .then((querySnapshot) {
                                                 if (querySnapshot
                                                     .docs.isEmpty) {
-                                                  handleAuth(context);
+                                                  controlUploadAndRetrieve();
                                                 } else {
                                                   Fluttertoast.showToast(
                                                       msg:
@@ -482,7 +609,7 @@ class _AuthPageState extends State<AuthPage> {
                                               },
                                               child: Text("Log In",
                                                   style: GoogleFonts.baloo2(
-                                                      color: Colors.pink)),
+                                                      color: Colors.blue)),
                                             ),
                                           ],
                                         ),
@@ -490,14 +617,14 @@ class _AuthPageState extends State<AuthPage> {
                                     ]
                                   : [
                                       AuthTextField(
-                                        controller: phone,
+                                        controller: email,
                                         prefixIcon: const Icon(
-                                          Icons.phone,
+                                          Icons.email_outlined,
                                           color: Colors.grey,
                                         ),
-                                        hintText: "Phone (+2547...)",
+                                        hintText: "Email Address",
                                         isObscure: false,
-                                        inputType: TextInputType.phone,
+                                        inputType: TextInputType.emailAddress,
                                       ),
                                       AuthTextField(
                                         controller: password,
@@ -529,9 +656,9 @@ class _AuthPageState extends State<AuthPage> {
                                         padding: const EdgeInsets.all(10.0),
                                         child: RaisedButton.icon(
                                           onPressed: () {
-                                            if (phone.text.isNotEmpty &&
+                                            if (email.text.isNotEmpty &&
                                                 password.text.isNotEmpty) {
-                                              handleAuth(context);
+                                              controlUploadAndRetrieve();
                                             }
                                           },
                                           color: Theme.of(context).primaryColor,
@@ -571,7 +698,7 @@ class _AuthPageState extends State<AuthPage> {
                                               },
                                               child: Text("Create Account",
                                                   style: GoogleFonts.baloo2(
-                                                      color: Colors.pink)),
+                                                      color: Colors.blue)),
                                             ),
                                           ],
                                         ),

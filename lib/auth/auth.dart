@@ -343,11 +343,15 @@ class Authentication {
 
     String result = "";
 
+    print("=====================2========================");
+
     await auth.verifyPhoneNumber(
       phoneNumber: phone!,
-      timeout: const Duration(minutes: 3),
+      timeout: const Duration(minutes: 1),
       verificationCompleted: (PhoneAuthCredential credential) async {
         // ANDROID ONLY!
+
+        print("=====================3========================");
 
         UserCredential userCredential =
             await auth.signInWithCredential(credential);

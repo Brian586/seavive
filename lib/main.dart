@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:seavive/config.dart';
 import 'package:seavive/pages/authPage.dart';
@@ -17,10 +18,16 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+   options: DefaultFirebaseOptions.android,
   );
 
-  runApp(const MyApp());
+  runApp(MultiProvider(
+    providers: [
+      ChangeNotifierProvider<SeaVive>(
+          create: (_) => SeaVive())
+    ],
+    child: const MyApp(),
+  ));
 }
 
 class MyApp extends StatelessWidget {
@@ -31,6 +38,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'SeaVive',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
@@ -60,7 +68,7 @@ class _SplashScreenState extends State<SplashScreen> {
     Timer(const Duration(seconds: 3), () async {
       auth.authStateChanges().listen((User? user) async {
         if (user == null) {
-          Navigator.push(context,
+          Navigator.pushReplacement(context,
               MaterialPageRoute(builder: (context) => const AuthPage()));
         } else {
           final user = FirebaseAuth.instance.currentUser;
@@ -75,7 +83,7 @@ class _SplashScreenState extends State<SplashScreen> {
             context.read<SeaVive>().switchUser(account);
           });
 
-          Navigator.push(context,
+          Navigator.pushReplacement(context,
               MaterialPageRoute(builder: (context) => const HomePage()));
         }
       });
@@ -84,13 +92,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       extendBody: true,
       extendBodyBehindAppBar: true,
       body: Center(
         child: Text(
           "SeaVive",
-          style: TextStyle(color: Colors.blue),
+          style: GoogleFonts.pacifico(fontSize: 40.0, color: Colors.blue ),
         ),
       ),
     );

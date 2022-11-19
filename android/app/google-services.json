@@ -1,33 +1,41 @@
 {
   "project_info": {
-    "project_number": "497650999365",
-    "project_id": "seavive-10dad",
-    "storage_bucket": "seavive-10dad.appspot.com"
+    "project_number": "355584569755",
+    "project_id": "seavive-98f09",
+    "storage_bucket": "seavive-98f09.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:497650999365:android:ce88da4144481d7a62432c",
+        "mobilesdk_app_id": "1:355584569755:android:d4725d8cc06aa2873bf13e",
         "android_client_info": {
           "package_name": "com.example.seavive"
         }
       },
       "oauth_client": [
         {
-          "client_id": "497650999365-1qv0fj0u59hrr5bsca7maqbhaf9v0aq5.apps.googleusercontent.com",
+          "client_id": "355584569755-5sb3g2g34aoe90rq94qeg2kd92am3ou2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.seavive",
+            "certificate_hash": "a6c3dca66e96c2bb1a534333f7648d8bd8c0a911"
+          }
+        },
+        {
+          "client_id": "355584569755-1antjhontgpmvontkdrj3hdiiegtfv5c.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyA26gscvgDS9kU47UbWEhnQF1kw_I5-M_A"
+          "current_key": "AIzaSyBuxJ1V7WunytETrgjdl8CTCJ5WPFAGGNg"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "497650999365-1qv0fj0u59hrr5bsca7maqbhaf9v0aq5.apps.googleusercontent.com",
+              "client_id": "355584569755-1antjhontgpmvontkdrj3hdiiegtfv5c.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
